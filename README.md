@@ -19,10 +19,10 @@ ELSE IF 1st class THEN survival probability: 96% (92% - 99%)
 ELSE survival probability: 88% (82% - 94%)
 ``` 
 
-Letham et al.'s approach only works on discrete data. The RuleListClassifier class
-here also includes a discretizer that can deal with continuous data (using [Fayyad &
-Irani's](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf) minimum 
-description length principle criterion, based on an implementation by 
+Letham et al.'s approach only works on discrete data. However, this approach can still be used
+on continuous data after discretization. The RuleListClassifier class also includes a discretizer 
+that can deal with continuous data (using [Fayyad & Irani's](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf) 
+minimum description length principle criterion, based on an implementation by 
 [navicto](https://github.com/navicto/Discretization-MDLPC)).
 
 Usage

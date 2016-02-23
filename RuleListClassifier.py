@@ -228,17 +228,4 @@ class RuleListClassifier(BaseEstimator):
         return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
     
 if __name__ == "__main__":
-    from demo import *
-    
-    
-    """
-    traindata,Ytrain = load_data('LethamBRL/titanic_train')
-    testdata,Ytest = load_data('LethamBRL/titanic_test')
-    
-    clf = RuleListClassifier(max_iter=5000, n_chains=2)
-    clf.fit(traindata, Ytrain[:,1])
-    
-    print "accuracy:", clf.score(testdata, Ytest[:, 1])
-    print "rules:"
-    print clf
-    """
+    from examples.demo import *
