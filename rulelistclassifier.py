@@ -72,13 +72,10 @@ class RuleListClassifier(BaseEstimator):
         self : returns an instance of self.
         """
         if feature_labels == None:
-            feature_labels = [str(i) for i in range(len(X[0]))]
+            feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
         self.feature_labels = feature_labels
         
-        if type(X) == np.ndarray:
-            X = X.tolist()
-        
-        if type(X[0][0]) != str and 'int' not in str(type(X[0][0])) and 'long' not in str(type(X[0][0])):
+        if type(X[0][0]) != str:
             if self.verbose:
                 print "Warning: non-categorical data. Trying to discretize..."
             X = self.discretize(X)
@@ -132,8 +129,12 @@ class RuleListClassifier(BaseEstimator):
         return self
     
     def discretize(self, X):
-        print "not implemented"
-        return X
+        Xcat = np.copy(X).astype(int).astype(str).tolist()
+        for i in range(len(Xcat)):
+            for j in range(len(Xcat[0])):
+                Xcat[i][j] = self.feature_labels[j]+":"+Xcat[i][j]
+        
+        return Xcat
     
     def __str__(self):
         if self.d_star:
@@ -170,7 +171,7 @@ class RuleListClassifier(BaseEstimator):
         N = len(X)
         X = self._to_itemset_indices(X[:])
         P = preds_d_t(X, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
-        return np.vstack((P, 1-P)).T
+        return np.vstack((1-P, P)).T
         
     def predict(self, X):
         """Perform classification on samples in X.
@@ -184,18 +185,40 @@ class RuleListClassifier(BaseEstimator):
         y_pred : array, shape = [n_samples]
             Class labels for samples in X.
         """
-        return 1*(self.predict_proba(X)[:,1]>=0.5)
+        return 1*(self.predict_proba(X)[:,0]>=0.5)
     
     def score(self, X, y, sample_weight=None):
         return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
     
 if __name__ == "__main__":
+    #"""
+    from sklearn.cross_validation import train_test_split
+    n = 40
+    f = 3
+    #X0 = np.array([range(f)]*(n/2))
+    X0 = np.array([[1,2,3]]*(n/2))
+    X1 = np.array([[2,3,4]]*(n/2))
+    X = np.vstack((X0, X1))
+    y = np.array([0]*(n/2)+[1]*(n/2)).astype(int)
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
+    
+    
+    clf = RuleListClassifier(max_iter=50000, n_chains=3)
+    clf.fit(Xtrain, ytrain)
+    
+    print "accuracy:", clf.score(Xtest, ytest)
+    print "rules:"
+    print clf
+    #"""
+    
+    """
     traindata,Ytrain = load_data('LethamBRL/titanic_train')
     testdata,Ytest = load_data('LethamBRL/titanic_test')
     
     clf = RuleListClassifier(max_iter=5000, n_chains=2)
-    clf.fit(traindata, Ytrain[:,0])
+    clf.fit(traindata, Ytrain[:,1])
     
-    print "accuracy:", clf.score(testdata, Ytest[:, 0])
+    print "accuracy:", clf.score(testdata, Ytest[:, 1])
     print "rules:"
     print clf
+    """

@@ -112,7 +112,7 @@ def topscript():
     minsupport = 10 #minimum support (%) of an itemset
     
     #mcmc parameters
-    numiters = 500#50000 # Uncomment plot_chains in run_bdl_multichain to visually check mixing and convergence
+    numiters = 5000#50000 # Uncomment plot_chains in run_bdl_multichain to visually check mixing and convergence
     thinning = 1 #The thinning rate
     burnin = numiters//2 #the number of samples to drop as burn-in in-simulation
     nchains = 3 #number of MCMC chains. These are simulated in serial, and then merged after checking for convergence.
