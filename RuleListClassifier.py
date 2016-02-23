@@ -1,4 +1,5 @@
 from sklearn.base import BaseEstimator
+from sklearn.utils import check_X_y
 import sklearn.metrics
 import sys
 import numpy as np
@@ -36,11 +37,14 @@ class RuleListClassifier(BaseEstimator):
     max_iter : int, optional (default=50000)
         Maximum number of iterations
         
+    class1label: str, optional (default="class 1")
+        Label or description of what class 1 means
+        
     verbose: bool, optional (default=True)
         Verbose output
     """
     
-    def __init__(self, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, verbose=True):
+    def __init__(self, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class1label="class 1", verbose=True):
         self.listlengthprior = listlengthprior
         self.listwidthprior = listwidthprior
         self.maxcardinality = maxcardinality
@@ -48,6 +52,7 @@ class RuleListClassifier(BaseEstimator):
         self.alpha = alpha
         self.n_chains = n_chains
         self.max_iter = max_iter
+        self.class1label = class1label
         self.verbose = verbose
         
         self.thinning = 1 #The thinning rate
@@ -77,12 +82,15 @@ class RuleListClassifier(BaseEstimator):
         """
         if len(set(y)) != 2:
             raise Exception("Only binary classification is supported at this time!")
+        X, y = check_X_y(X, y, ensure_min_samples=2, estimator=self)
         
         if feature_labels == None:
             feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
         self.feature_labels = feature_labels
         
-        if type(X[0][0]) != str:
+        if type(X) != list:
+            X = np.array(X).tolist()
+        if 'str' not in str(type(X[0][0])):
             if self.verbose:
                 print "Warning: non-categorical data. Trying to discretize..."
             X = self.discretize(X, y)
@@ -102,7 +110,8 @@ class RuleListClassifier(BaseEstimator):
             itemsets = [r[0] for r in fpgrowth(data_pos,supp=self.minsupport,max=self.maxcardinality)]
             itemsets.extend([r[0] for r in fpgrowth(data_neg,supp=self.minsupport,max=self.maxcardinality)])
         itemsets = list(set(itemsets))
-        print len(itemsets),'rules mined'
+        if self.verbose:
+            print len(itemsets),'rules mined'
         #Now form the data-vs.-lhs set
         #X[j] is the set of data points that contain itemset j (that is, satisfy rule j)
         X = [ set() for j in range(len(itemsets)+1)]
@@ -144,15 +153,24 @@ class RuleListClassifier(BaseEstimator):
         Xl = np.copy(X).astype(str).tolist()
         for i in range(len(Xl)):
             for j in range(len(Xl[0])):
-                Xl[i][j] = self.feature_labels[j]+":"+Xl[i][j]
+                Xl[i][j] = self.feature_labels[j]+" : "+Xl[i][j]
         return Xl
     
     def __str__(self):
         if self.d_star:
+            detect = ""
+            if self.class1label != "class 1":
+                detect = "for detecting "+self.class1label
+            header = "Trained RuleListClassifier "+detect+"\n"
+            separator = "".join(["="]*len(header))+"\n"
             s = ""
             for i,j in enumerate(self.d_star):
-                s += str(self.itemsets[j])+" -> probability of class 1: "+str(self.theta[i]) + "("+str(self.ci_theta[i][0])+"-"+str(self.ci_theta[i][0])+")\n"
-            return s
+                if self.itemsets[j] != 'null':
+                    condition = "ELSE IF "+(" AND ".join([self.itemsets[j][k] for k in range(len(self.itemsets[j]))])) + " THEN"
+                else:
+                    condition = "ELSE"
+                s += condition + " probability of "+self.class1label+": "+str(np.round(self.theta[i],3)*100) + "% ("+str(np.round(self.ci_theta[i][0],3)*100)+"%-"+str(np.round(self.ci_theta[i][1],3)*100)+"%)\n"
+            return header+separator+s[5:]+separator[1:]
         else:
             return "(Untrained RuleListClassifier)"
         
@@ -210,26 +228,7 @@ class RuleListClassifier(BaseEstimator):
         return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
     
 if __name__ == "__main__":
-
-    from sklearn.cross_validation import train_test_split
-    from sklearn.datasets import load_iris
-    data = load_iris()
-    X = data.data
-    y = data.target
-    y[y==0] = 2
-    y-=1
-
-    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)    
-    
-    clf = RuleListClassifier(max_iter=50000, n_chains=3)
-    clf.fit(Xtrain, ytrain, feature_labels=["Sepal length", "Sepal width", "Petal length", "Petal width"])
-    
-    print "accuracy:", clf.score(Xtest, ytest)
-    print "rules:"
-    print clf
-    
-    import sklearn.ensemble
-    print "Random Forest accuracy:", sklearn.ensemble.RandomForestClassifier().fit(X, y).score(Xtest, ytest)
+    from demo import *
     
     
     """

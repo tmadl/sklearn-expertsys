@@ -78,10 +78,10 @@
 #distribution for each entry in BRL-point.
 # - ci_theta - A list of tuples, each the 95% credible interval for the 
 #corresponding theta.
-# - preds_d_star - Predictions on the test data made using d_star and theta.
+# - preds_d_star - Predictions on the demo data made using d_star and theta.
 # - accur_d_star - The accuracy of the BRL-point predictions, with the decision 
 #boundary at 0.5.
-# - preds_fullpost - Predictions on the test data using the full posterior 
+# - preds_fullpost - Predictions on the demo data using the full posterior 
 #(BRL-post)
 # - accur_fullpost - The accuracy of the BRL-post predictions, decision boundary 
 #at 0.5.
@@ -96,8 +96,12 @@ from scipy.stats import poisson,beta
 import cPickle as Pickle
 from collections import defaultdict,Counter
 from fim import fpgrowth #this is PyFIM, available from http://www.borgelt.net/pyfim.html
-#from matplotlib import pyplot as plt #Uncomment to use the plot_chains function
+from joblib import Parallel, delayed
 
+try:
+    from matplotlib import pyplot as plt
+except:
+    pass 
 
 def topscript():
     fname = 'titanic'
@@ -122,7 +126,7 @@ def topscript():
     #Now we load data and do MCMC
     permsdic = defaultdict(default_permsdic) #We will store here the MCMC results
     Xtrain,Ytrain,nruleslen,lhs_len,itemsets = get_freqitemsets(fname+'_train',minsupport,maxlhs) #Do frequent itemset mining from the training data
-    Xtest,Ytest,Ylabels_test = get_testdata(fname+'_test',itemsets) #Load the test data
+    Xtest,Ytest,Ylabels_test = get_testdata(fname+'_test',itemsets) #Load the demo data
     print 'Data loaded!'
     
     #Do MCMC
@@ -143,8 +147,8 @@ def topscript():
         for i,j in enumerate(d_star):
             print itemsets[j],theta[i],ci_theta[i]
         
-        #Evaluate on the test data
-        preds_d_star = preds_d_t(Xtest,Ytest,d_star,theta) #Use d_star to make predictions on the test data
+        #Evaluate on the demo data
+        preds_d_star = preds_d_t(Xtest,Ytest,d_star,theta) #Use d_star to make predictions on the demo data
         accur_d_star = preds_to_acc(preds_d_star,Ylabels_test)#Accuracy of the point estimate
         print 'accuracy of point estimate',accur_d_star
     
@@ -170,22 +174,17 @@ def reset_permsdic(permsdic):
 
 #Run mcmc for each of the chains, IN SERIAL!
 def run_bdl_multichain_serial(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,nchains,d_inits,verbose=True):
-    #Run each chain in serial.
+    #Run each chain 
+    t1 = time.clock()
+    if verbose:
+        print 'Starting mcmc chains'
     res = {}
     for n in range(nchains):
-        res[n] = {}
-        t1 = time.clock()
-        if verbose:
-            print 'Starting chain',n
-        permsdic,res[n]['perms'] = bayesdl_mcmc(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,None,d_inits[n])
-        if verbose:
-            print 'Elapsed CPU time',time.clock()-t1
-        #Store the permsdic results
-        res[n]['permsdic'] = {perm:list(vals) for perm,vals in permsdic.iteritems() if vals[1]>0}
-        #Reset the permsdic
-        permsdic = reset_permsdic(permsdic)
-        #Continue with the next chain
-    
+        res[n] = mcmcchain(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,nchains,d_inits[n])
+        
+    if verbose:
+        print 'Elapsed CPU time',time.clock()-t1
+
     #Check convergence
     Rhat = gelmanrubin(res)
     
@@ -195,6 +194,14 @@ def run_bdl_multichain_serial(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs
     #plot_chains(res)
     return res,Rhat
 
+def mcmcchain(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,nchains,d_init):
+    res = {}
+    permsdic,res['perms'] = bayesdl_mcmc(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,None,d_init)
+    #Store the permsdic results
+    res['permsdic'] = {perm:list(vals) for perm,vals in permsdic.iteritems() if vals[1]>0}
+    #Reset the permsdic
+    permsdic = reset_permsdic(permsdic)
+    return res
 
 #Check convergence with GR diagnostic
 def gelmanrubin(res):
@@ -638,9 +645,9 @@ def get_freqitemsets(fname,minsupport,maxlhs, verbose=True):
     itemsets_all.extend(itemsets)
     return X,Y,nruleslen,lhs_len,itemsets_all
   
-#Load the test data, and determine which antecedents are satisfied by each test observation
+#Load the demo data, and determine which antecedents are satisfied by each demo observation
 def get_testdata(fname,itemsets):
-    #And now the test data.
+    #And now the demo data.
     #first load the data
     data,Y = load_data(fname)
     #Now form the data-vs.-lhs set
