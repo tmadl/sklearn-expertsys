@@ -9,7 +9,7 @@ import getopt
 import re
 
 class MDLP_Discretizer(object):
-    def __init__(self, dataset, class_label, out_path_data, out_path_bins, features=None):
+    def __init__(self, dataset, class_label, out_path_data=None, out_path_bins=None, features=None):
         '''
         initializes discretizer object:
             saves raw copy of data and creates self._data with only features to discretize and class
@@ -32,7 +32,8 @@ class MDLP_Discretizer(object):
 
         self._class_name = class_label
 
-        self._classes = self._data_raw[self._class_name].unique()
+        self._classes = self._data_raw[self._class_name] #.unique()
+        self._classes.drop_duplicates()
 
 
         #if user specifies which attributes to discretize

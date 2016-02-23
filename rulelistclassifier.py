@@ -2,7 +2,9 @@ from sklearn.base import BaseEstimator
 import sklearn.metrics
 import sys
 import numpy as np
+import pandas as pd
 from LethamBRL.BRL_code import *
+from Discretization.MDLP import *
 
 class RuleListClassifier(BaseEstimator):
     """
@@ -47,10 +49,12 @@ class RuleListClassifier(BaseEstimator):
         self.n_chains = n_chains
         self.max_iter = max_iter
         self.verbose = verbose
-        self.d_star = None
         
         self.thinning = 1 #The thinning rate
         self.burnin = self.max_iter//2 #the number of samples to drop as burn-in in-simulation
+        
+        self.discretizer = None
+        self.d_star = None
         
         
     def fit(self, X, y, feature_labels = None): # -1 for unlabeled
@@ -71,6 +75,9 @@ class RuleListClassifier(BaseEstimator):
         -------
         self : returns an instance of self.
         """
+        if len(set(y)) != 2:
+            raise Exception("Only binary classification is supported at this time!")
+        
         if feature_labels == None:
             feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
         self.feature_labels = feature_labels
@@ -78,7 +85,7 @@ class RuleListClassifier(BaseEstimator):
         if type(X[0][0]) != str:
             if self.verbose:
                 print "Warning: non-categorical data. Trying to discretize..."
-            X = self.discretize(X)
+            X = self.discretize(X, y)
         
         permsdic = defaultdict(default_permsdic) #We will store here the MCMC results
         
@@ -128,13 +135,17 @@ class RuleListClassifier(BaseEstimator):
             
         return self
     
-    def discretize(self, X):
-        Xcat = np.copy(X).astype(int).astype(str).tolist()
-        for i in range(len(Xcat)):
-            for j in range(len(Xcat[0])):
-                Xcat[i][j] = self.feature_labels[j]+":"+Xcat[i][j]
-        
-        return Xcat
+    def discretize(self, X, y):
+        D = pd.DataFrame(np.hstack(( X, np.array(y).reshape((len(y), 1)) )), columns=list(self.feature_labels)+["y"])
+        self.discretizer = MDLP_Discretizer(dataset=D, class_label="y")
+        return self._prepend_feature_labels(np.array(self.discretizer._data)[:, :-1])
+    
+    def _prepend_feature_labels(self, X):
+        Xl = np.copy(X).astype(str).tolist()
+        for i in range(len(Xl)):
+            for j in range(len(Xl[0])):
+                Xl[i][j] = self.feature_labels[j]+":"+Xl[i][j]
+        return Xl
     
     def __str__(self):
         if self.d_star:
@@ -168,8 +179,16 @@ class RuleListClassifier(BaseEstimator):
             the model. The columns correspond to the classes in sorted
             order, as they appear in the attribute `classes_`.
         """
-        N = len(X)
-        X = self._to_itemset_indices(X[:])
+        
+        if self.discretizer != None:
+            self.discretizer._data = pd.DataFrame(X, columns=self.feature_labels)
+            self.discretizer.apply_cutpoints()
+            D = self._prepend_feature_labels(np.array(self.discretizer._data)[:, :-1])
+        else:
+            D = X
+        
+        N = len(D)
+        X = self._to_itemset_indices(D[:])
         P = preds_d_t(X, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
         return np.vstack((1-P, P)).T
         
@@ -191,25 +210,27 @@ class RuleListClassifier(BaseEstimator):
         return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
     
 if __name__ == "__main__":
-    #"""
+
     from sklearn.cross_validation import train_test_split
-    n = 40
-    f = 3
-    #X0 = np.array([range(f)]*(n/2))
-    X0 = np.array([[1,2,3]]*(n/2))
-    X1 = np.array([[2,3,4]]*(n/2))
-    X = np.vstack((X0, X1))
-    y = np.array([0]*(n/2)+[1]*(n/2)).astype(int)
-    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
-    
+    from sklearn.datasets import load_iris
+    data = load_iris()
+    X = data.data
+    y = data.target
+    y[y==0] = 2
+    y-=1
+
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)    
     
     clf = RuleListClassifier(max_iter=50000, n_chains=3)
-    clf.fit(Xtrain, ytrain)
+    clf.fit(Xtrain, ytrain, feature_labels=["Sepal length", "Sepal width", "Petal length", "Petal width"])
     
     print "accuracy:", clf.score(Xtest, ytest)
     print "rules:"
     print clf
-    #"""
+    
+    import sklearn.ensemble
+    print "Random Forest accuracy:", sklearn.ensemble.RandomForestClassifier().fit(X, y).score(Xtest, ytest)
+    
     
     """
     traindata,Ytrain = load_data('LethamBRL/titanic_train')
