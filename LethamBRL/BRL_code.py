@@ -112,7 +112,7 @@ def topscript():
     minsupport = 10 #minimum support (%) of an itemset
     
     #mcmc parameters
-    numiters = 50000 # Uncomment plot_chains in run_bdl_multichain to visually check mixing and convergence
+    numiters = 500#50000 # Uncomment plot_chains in run_bdl_multichain to visually check mixing and convergence
     thinning = 1 #The thinning rate
     burnin = numiters//2 #the number of samples to drop as burn-in in-simulation
     nchains = 3 #number of MCMC chains. These are simulated in serial, and then merged after checking for convergence.
@@ -169,15 +169,17 @@ def reset_permsdic(permsdic):
     return permsdic
 
 #Run mcmc for each of the chains, IN SERIAL!
-def run_bdl_multichain_serial(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,nchains,d_inits):
+def run_bdl_multichain_serial(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,nchains,d_inits,verbose=True):
     #Run each chain in serial.
     res = {}
     for n in range(nchains):
         res[n] = {}
         t1 = time.clock()
-        print 'Starting chain',n
+        if verbose:
+            print 'Starting chain',n
         permsdic,res[n]['perms'] = bayesdl_mcmc(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs_len,maxlhs,permsdic,burnin,None,d_inits[n])
-        print 'Elapsed CPU time',time.clock()-t1
+        if verbose:
+            print 'Elapsed CPU time',time.clock()-t1
         #Store the permsdic results
         res[n]['permsdic'] = {perm:list(vals) for perm,vals in permsdic.iteritems() if vals[1]>0}
         #Reset the permsdic
@@ -187,7 +189,8 @@ def run_bdl_multichain_serial(numiters,thinning,alpha,lbda,eta,X,Y,nruleslen,lhs
     #Check convergence
     Rhat = gelmanrubin(res)
     
-    print 'Rhat for convergence:',Rhat
+    if verbose:
+        print 'Rhat for convergence:',Rhat
     ##plot?
     #plot_chains(res)
     return res,Rhat
@@ -252,7 +255,7 @@ def merge_chains(res):
     return permsdic
 
 #Get a point estimate with length and width similar to the posterior average, with highest likelihood
-def get_point_estimate(permsdic,lhs_len,X,Y,alpha,nruleslen,maxlhs,lbda,eta):
+def get_point_estimate(permsdic,lhs_len,X,Y,alpha,nruleslen,maxlhs,lbda,eta,verbose=True):
     #Figure out the posterior expected list length and average rule size
     listlens = []
     rulesizes = []
@@ -262,10 +265,12 @@ def get_point_estimate(permsdic,lhs_len,X,Y,alpha,nruleslen,maxlhs,lbda,eta):
         rulesizes.extend([lhs_len[j] for j in d_t[:-1]] * int(permsdic[perm][1]))
     #Now compute average
     avglistlen = average(listlens)
-    print 'Posterior average length:',avglistlen
+    if verbose:
+        print 'Posterior average length:',avglistlen
     try:
         avgrulesize = average(rulesizes)
-        print 'Posterior average width:',avgrulesize
+        if verbose:
+            print 'Posterior average width:',avgrulesize
         #Prepare the intervals
         minlen = int(floor(avglistlen))
         maxlen = int(ceil(avglistlen))
@@ -598,7 +603,7 @@ def compute_rule_usage(d_star,R_star,X,Y):
 ####Data loading
 
 #Frequent itemset mining
-def get_freqitemsets(fname,minsupport,maxlhs):
+def get_freqitemsets(fname,minsupport,maxlhs, verbose=True):
     #minsupport is an integer percentage (e.g. 10 for 10%)
     #maxlhs is the maximum size of the lhs
     #first load the data
@@ -615,7 +620,8 @@ def get_freqitemsets(fname,minsupport,maxlhs):
         itemsets = [r[0] for r in fpgrowth(data_pos,supp=minsupport,max=maxlhs)]
         itemsets.extend([r[0] for r in fpgrowth(data_neg,supp=minsupport,max=maxlhs)])
     itemsets = list(set(itemsets))
-    print len(itemsets),'rules mined'
+    if verbose:
+        print len(itemsets),'rules mined'
     #Now form the data-vs.-lhs set
     #X[j] is the set of data points that contain itemset j (that is, satisfy rule j)
     X = [ set() for j in range(len(itemsets)+1)]

@@ -2,7 +2,7 @@ from sklearn.base import BaseEstimator
 import sklearn.metrics
 import sys
 import numpy as np
-from LethamBRL import *
+from LethamBRL.BRL_code import *
 
 class RuleListClassifier(BaseEstimator):
     """
@@ -33,9 +33,12 @@ class RuleListClassifier(BaseEstimator):
 
     max_iter : int, optional (default=50000)
         Maximum number of iterations
+        
+    verbose: bool, optional (default=True)
+        Verbose output
     """
     
-    def __init__(self, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = array([1.,1.]), n_chains=3, max_iter=50000):
+    def __init__(self, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, verbose=True):
         self.listlengthprior = listlengthprior
         self.listwidthprior = listwidthprior
         self.maxcardinality = maxcardinality
@@ -43,12 +46,14 @@ class RuleListClassifier(BaseEstimator):
         self.alpha = alpha
         self.n_chains = n_chains
         self.max_iter = max_iter
+        self.verbose = verbose
+        self.d_star = None
         
         self.thinning = 1 #The thinning rate
         self.burnin = self.max_iter//2 #the number of samples to drop as burn-in in-simulation
         
         
-    def fit(self, X, y): # -1 for unlabeled
+    def fit(self, X, y, feature_labels = None): # -1 for unlabeled
         """Fit rule lists to data
 
         Parameters
@@ -58,14 +63,29 @@ class RuleListClassifier(BaseEstimator):
 
         y : array_like, shape = [n_samples]
             Labels
+            
+        feature_labels : array_like, shape = [n_features], optional (default: None)
+            String labels for each feature. If none, features are simply enumerated
 
         Returns
         -------
         self : returns an instance of self.
         """
+        if feature_labels == None:
+            feature_labels = [str(i) for i in range(len(X[0]))]
+        self.feature_labels = feature_labels
+        
+        if type(X) == np.ndarray:
+            X = X.tolist()
+        
+        if type(X[0][0]) != str and 'int' not in str(type(X[0][0])) and 'long' not in str(type(X[0][0])):
+            if self.verbose:
+                print "Warning: non-categorical data. Trying to discretize..."
+            X = self.discretize(X)
+        
         permsdic = defaultdict(default_permsdic) #We will store here the MCMC results
         
-        data = np.copy(X)
+        data = list(X[:])
         #Now find frequent itemsets
         #Mine separately for each class
         data_pos = [x for i,x in enumerate(data) if y[i]==0]
@@ -94,17 +114,88 @@ class RuleListClassifier(BaseEstimator):
         itemsets_all = ['null']
         itemsets_all.extend(itemsets)
         
-        Xtrain,Ytrain,nruleslen,lhs_len,itemsets = (X,np.vstack((y, 1-y)).T,nruleslen,lhs_len,itemsets_all)
+        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((y, 1-y)).T.astype(int),nruleslen,lhs_len,itemsets_all)
             
         #Do MCMC
-        res,Rhat = run_bdl_multichain_serial(self.max_iter,self.thinning,self.alpha,self.listlengthprior,self.listwidthprior,Xtrain,Ytrain,nruleslen,lhs_len,self.maxcardinality,permsdic,self.burnin,self.nchains,[None]*self.nchains)
+        res,Rhat = run_bdl_multichain_serial(self.max_iter,self.thinning,self.alpha,self.listlengthprior,self.listwidthprior,Xtrain,Ytrain,nruleslen,lhs_len,self.maxcardinality,permsdic,self.burnin,self.n_chains,[None]*self.n_chains, verbose=self.verbose)
             
         #Merge the chains
         permsdic = merge_chains(res)
         
         ###The point estimate, BRL-point
-        self.d_star = get_point_estimate(permsdic,lhs_len,Xtrain,Ytrain,self.alpha,nruleslen,self.maxcardinality,self.listlengthprior,self.listwidthprior) #get the point estimate
+        self.d_star = get_point_estimate(permsdic,lhs_len,Xtrain,Ytrain,self.alpha,nruleslen,self.maxcardinality,self.listlengthprior,self.listwidthprior, verbose=self.verbose) #get the point estimate
+        
+        if self.d_star:
+            #Compute the rule consequent
+            self.theta, self.ci_theta = get_rule_rhs(Xtrain,Ytrain,self.d_star,self.alpha,True)
             
         return self
+    
+    def discretize(self, X):
+        print "not implemented"
+        return X
+    
+    def __str__(self):
+        if self.d_star:
+            s = ""
+            for i,j in enumerate(self.d_star):
+                s += str(self.itemsets[j])+" -> probability of class 1: "+str(self.theta[i]) + "("+str(self.ci_theta[i][0])+"-"+str(self.ci_theta[i][0])+")\n"
+            return s
+        else:
+            return "(Untrained RuleListClassifier)"
         
+    def _to_itemset_indices(self, data):
+        #X[j] is the set of data points that contain itemset j (that is, satisfy rule j)
+        X = [set() for j in range(len(self.itemsets))]
+        X[0] = set(range(len(data))) #the default rule satisfies all data
+        for (j,lhs) in enumerate(self.itemsets):
+            if j>0:
+                X[j] = set([i for (i,xi) in enumerate(data) if set(lhs).issubset(xi)])
+        return X
+        
+    def predict_proba(self, X):
+        """Compute probabilities of possible outcomes for samples in X.
 
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_features]
+
+        Returns
+        -------
+        T : array-like, shape = [n_samples, n_classes]
+            Returns the probability of the sample for each class in
+            the model. The columns correspond to the classes in sorted
+            order, as they appear in the attribute `classes_`.
+        """
+        N = len(X)
+        X = self._to_itemset_indices(X[:])
+        P = preds_d_t(X, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
+        return np.vstack((P, 1-P)).T
+        
+    def predict(self, X):
+        """Perform classification on samples in X.
+
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_features]
+
+        Returns
+        -------
+        y_pred : array, shape = [n_samples]
+            Class labels for samples in X.
+        """
+        return 1*(self.predict_proba(X)[:,1]>=0.5)
+    
+    def score(self, X, y, sample_weight=None):
+        return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
+    
+if __name__ == "__main__":
+    traindata,Ytrain = load_data('LethamBRL/titanic_train')
+    testdata,Ytest = load_data('LethamBRL/titanic_test')
+    
+    clf = RuleListClassifier(max_iter=5000, n_chains=2)
+    clf.fit(traindata, Ytrain[:,0])
+    
+    print "accuracy:", clf.score(testdata, Ytest[:, 0])
+    print "rules:"
+    print clf
