@@ -2,7 +2,7 @@ Highly interpretable, sklearn-compatible classifier based on decision rules
 ===============
 
 This is a scikit-learn compatible wrapper for the Bayesian Rule List classifier 
-developed by [Benjamin Letham et al., 2015](http://projecteuclid.org/euclid.aoas/1446488742), 
+developed by [Letham et al., 2015](http://projecteuclid.org/euclid.aoas/1446488742) (see [Letham's original code](http://lethalletham.com/)), 
 extended by a minimum description length-based discretizer ([Fayyad &
 Irani, 1993](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf)) for continuous data.
 
