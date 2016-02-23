@@ -92,7 +92,7 @@ class RuleListClassifier(BaseEstimator):
             X = np.array(X).tolist()
         if 'str' not in str(type(X[0][0])):
             if self.verbose:
-                print "Warning: non-categorical data. Trying to discretize..."
+                print "Warning: non-categorical data. Trying to discretize. (Please convert categorical values to strings to avoid this.)"
             X = self.discretize(X, y)
         
         permsdic = defaultdict(default_permsdic) #We will store here the MCMC results
@@ -157,6 +157,9 @@ class RuleListClassifier(BaseEstimator):
         return Xl
     
     def __str__(self):
+        return self.tostring(decimals=1)
+        
+    def tostring(self, decimals=1):
         if self.d_star:
             detect = ""
             if self.class1label != "class 1":
@@ -169,7 +172,7 @@ class RuleListClassifier(BaseEstimator):
                     condition = "ELSE IF "+(" AND ".join([self.itemsets[j][k] for k in range(len(self.itemsets[j]))])) + " THEN"
                 else:
                     condition = "ELSE"
-                s += condition + " probability of "+self.class1label+": "+str(np.round(self.theta[i],3)*100) + "% ("+str(np.round(self.ci_theta[i][0],3)*100)+"%-"+str(np.round(self.ci_theta[i][1],3)*100)+"%)\n"
+                s += condition + " probability of "+self.class1label+": "+str(np.round(self.theta[i]*100,decimals)) + "% ("+str(np.round(self.ci_theta[i][0]*100,decimals))+"%-"+str(np.round(self.ci_theta[i][1]*100,decimals))+"%)\n"
             return header+separator+s[5:]+separator[1:]
         else:
             return "(Untrained RuleListClassifier)"
