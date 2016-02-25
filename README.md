@@ -33,6 +33,11 @@ The project requires [pyFIM](http://www.borgelt.net/pyfim.html), [scikit-learn](
 Usage example:
 
 ```python
+from RuleListClassifier import *
+from sklearn.datasets.mldata import fetch_mldata
+from sklearn.cross_validation import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
 feature_labels = ["#Pregnant","Glucose concentration test","Blood pressure(mmHg)","Triceps skin fold thickness(mm)","2-Hour serum insulin (mu U/ml)","Body mass index","Diabetes pedigree function","Age (years)"]
     
 data = fetch_mldata("diabetes") # get dataset
@@ -44,7 +49,7 @@ clf = RuleListClassifier(max_iter=10000, class1label="diabetes", verbose=False)
 clf.fit(Xtrain, ytrain, feature_labels=feature_labels)
 
 print "RuleListClassifier Accuracy:", clf.score(Xtest, ytest), "Learned interpretable model:\n", clf
-print "RandomForestClassifier Accuracy:", sklearn.ensemble.RandomForestClassifier().fit(Xtrain, ytrain).score(Xtest, ytest)
+print "RandomForestClassifier Accuracy:", RandomForestClassifier().fit(Xtrain, ytrain).score(Xtest, ytest)
 """
 **Output:**
 RuleListClassifier Accuracy: 0.776041666667 Learned interpretable model:
