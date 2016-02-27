@@ -7,6 +7,16 @@ import pandas as pd
 from LethamBRL.BRL_code import *
 from Discretization.MDLP import *
 
+def is_numeric(obj):
+    try:
+        obj+obj, obj-obj, obj*obj, obj**obj, obj/obj
+    except ZeroDivisionError:
+        return True
+    except Exception:
+        return False
+    else:
+        return True
+
 class RuleListClassifier(BaseEstimator):
     """
     This is a scikit-learn compatible wrapper for the Bayesian Rule List
@@ -62,7 +72,7 @@ class RuleListClassifier(BaseEstimator):
         self.d_star = None
         
         
-    def fit(self, X, y, feature_labels = None): # -1 for unlabeled
+    def fit(self, X, y, feature_labels = [], undiscretized_features = []): # -1 for unlabeled
         """Fit rule lists to data
 
         Parameters
@@ -73,8 +83,11 @@ class RuleListClassifier(BaseEstimator):
         y : array_like, shape = [n_samples]
             Labels
             
-        feature_labels : array_like, shape = [n_features], optional (default: None)
+        feature_labels : array_like, shape = [n_features], optional (default: [])
             String labels for each feature. If none, features are simply enumerated
+            
+        undiscretized_features : array_like, shape = [n_features], optional (default: [])
+            String labels for each feature which is NOT to be discretized. If none, all numeric features are discretized
 
         Returns
         -------
@@ -82,17 +95,24 @@ class RuleListClassifier(BaseEstimator):
         """
         if len(set(y)) != 2:
             raise Exception("Only binary classification is supported at this time!")
-        X, y = check_X_y(X, y, ensure_min_samples=2, estimator=self)
         
-        if feature_labels == None:
+        if len(feature_labels) == 0:
             feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
         self.feature_labels = feature_labels
         
         if type(X) != list:
             X = np.array(X).tolist()
-        if 'str' not in str(type(X[0][0])):
+        
+        # check which features are numeric (to be discretized)
+        self.discretized_features = []
+        for fi in range(len(X[0])):
+            # if not string, and not specified as undiscretized
+            if is_numeric(X[0][fi]) and (len(feature_labels)==0 or len(undiscretized_features)==0 or feature_labels[fi] not in undiscretized_features):
+                self.discretized_features.append(feature_labels[fi])                
+            
+        if len(self.discretized_features) > 0:
             if self.verbose:
-                print "Warning: non-categorical data. Trying to discretize. (Please convert categorical values to strings to avoid this.)"
+                print "Warning: non-categorical data found. Trying to discretize. (Please convert categorical values to strings, and/or specify the argument 'undiscretized_features', to avoid this.)"
             X = self.discretize(X, y)
         
         permsdic = defaultdict(default_permsdic) #We will store here the MCMC results
@@ -127,7 +147,7 @@ class RuleListClassifier(BaseEstimator):
         itemsets_all = ['null']
         itemsets_all.extend(itemsets)
         
-        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((y, 1-y)).T.astype(int),nruleslen,lhs_len,itemsets_all)
+        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((y, 1-np.array(y))).T.astype(int),nruleslen,lhs_len,itemsets_all)
             
         #Do MCMC
         res,Rhat = run_bdl_multichain_serial(self.max_iter,self.thinning,self.alpha,self.listlengthprior,self.listwidthprior,Xtrain,Ytrain,nruleslen,lhs_len,self.maxcardinality,permsdic,self.burnin,self.n_chains,[None]*self.n_chains, verbose=self.verbose)
@@ -145,8 +165,10 @@ class RuleListClassifier(BaseEstimator):
         return self
     
     def discretize(self, X, y):
+        if self.verbose:
+            print "Discretizing ", self.discretized_features, "..."
         D = pd.DataFrame(np.hstack(( X, np.array(y).reshape((len(y), 1)) )), columns=list(self.feature_labels)+["y"])
-        self.discretizer = MDLP_Discretizer(dataset=D, class_label="y")
+        self.discretizer = MDLP_Discretizer(dataset=D, class_label="y", features=self.discretized_features)
         return self._prepend_feature_labels(np.array(self.discretizer._data)[:, :-1])
     
     def _prepend_feature_labels(self, X):
