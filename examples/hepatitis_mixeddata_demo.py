@@ -59,6 +59,8 @@ for c in hepatitis_df.columns:
     if hepatitis_df[c].dtype != np.object:
         hepatitis_df[c] = hepatitis_df[c].fillna(hepatitis_df[c][~np.isnan(hepatitis_df[c])].mean())
 
+print hepatitis_df.head()
+
 ###############################################################################
 
 Xtrain, Xtest, ytrain, ytest = train_test_split(hepatitis_df, y) # split
