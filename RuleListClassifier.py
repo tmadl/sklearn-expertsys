@@ -169,7 +169,16 @@ class RuleListClassifier(BaseEstimator):
             print "Discretizing ", self.discretized_features, "..."
         D = pd.DataFrame(np.hstack(( X, np.array(y).reshape((len(y), 1)) )), columns=list(self.feature_labels)+["y"])
         self.discretizer = MDLP_Discretizer(dataset=D, class_label="y", features=self.discretized_features)
-        return self._prepend_feature_labels(np.array(self.discretizer._data)[:, :-1])
+        
+        mixed_data = np.zeros_like(X)
+        for i in range(len(self.feature_labels)):
+            label = self.feature_labels[i]
+            if label in self.discretized_features:
+                mixed_data[:, i] = np.array([label + " : " + self.discretizer._data[label][j] for j in range(len(self.discretizer._data[label]))])
+            else:
+                mixed_data[:, i] = D[label]
+        
+        return mixed_data.tolist()
     
     def _prepend_feature_labels(self, X):
         Xl = np.copy(X).astype(str).tolist()
