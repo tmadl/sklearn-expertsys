@@ -96,7 +96,6 @@ from scipy.stats import poisson,beta
 import cPickle as Pickle
 from collections import defaultdict,Counter
 from fim import fpgrowth #this is PyFIM, available from http://www.borgelt.net/pyfim.html
-from joblib import Parallel, delayed
 
 try:
     from matplotlib import pyplot as plt
