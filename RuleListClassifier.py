@@ -6,16 +6,7 @@ import numpy as np
 import pandas as pd
 from LethamBRL.BRL_code import *
 from Discretization.MDLP import *
-
-def is_numeric(obj):
-    try:
-        obj+obj, obj-obj, obj*obj, obj**obj, obj/obj
-    except ZeroDivisionError:
-        return True
-    except Exception:
-        return False
-    else:
-        return True
+import numbers
 
 class RuleListClassifier(BaseEstimator):
     """
@@ -84,10 +75,12 @@ class RuleListClassifier(BaseEstimator):
             Labels
             
         feature_labels : array_like, shape = [n_features], optional (default: [])
-            String labels for each feature. If none, features are simply enumerated
+            String labels for each feature. If empty and X is a DataFrame, column 
+            labels are used. If empty and X is not a DataFrame, then features are  
+            simply enumerated
             
         undiscretized_features : array_like, shape = [n_features], optional (default: [])
-            String labels for each feature which is NOT to be discretized. If none, all numeric features are discretized
+            String labels for each feature which is NOT to be discretized. If empty, all numeric features are discretized
 
         Returns
         -------
@@ -97,7 +90,10 @@ class RuleListClassifier(BaseEstimator):
             raise Exception("Only binary classification is supported at this time!")
         
         if len(feature_labels) == 0:
-            feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
+            if type(X) == pd.DataFrame and ('object' in str(X.columns.dtype) or 'str' in str(X.columns.dtype)):
+                feature_labels = X.columns
+            else:
+                feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
         self.feature_labels = feature_labels
         
         if type(X) != list:
@@ -107,7 +103,7 @@ class RuleListClassifier(BaseEstimator):
         self.discretized_features = []
         for fi in range(len(X[0])):
             # if not string, and not specified as undiscretized
-            if is_numeric(X[0][fi]) and (len(feature_labels)==0 or len(undiscretized_features)==0 or feature_labels[fi] not in undiscretized_features):
+            if isinstance(X[0][fi], numbers.Number) and (len(feature_labels)==0 or len(undiscretized_features)==0 or feature_labels[fi] not in undiscretized_features):
                 self.discretized_features.append(feature_labels[fi])                
             
         if len(self.discretized_features) > 0:
@@ -170,15 +166,18 @@ class RuleListClassifier(BaseEstimator):
         D = pd.DataFrame(np.hstack(( X, np.array(y).reshape((len(y), 1)) )), columns=list(self.feature_labels)+["y"])
         self.discretizer = MDLP_Discretizer(dataset=D, class_label="y", features=self.discretized_features)
         
-        mixed_data = np.zeros_like(X)
+        cat_data = pd.DataFrame(np.zeros_like(X))
         for i in range(len(self.feature_labels)):
             label = self.feature_labels[i]
             if label in self.discretized_features:
-                mixed_data[:, i] = np.array([label + " : " + self.discretizer._data[label][j] for j in range(len(self.discretizer._data[label]))])
+                column = []
+                for j in range(len(self.discretizer._data[label])):
+                    column += [label + " : " + self.discretizer._data[label][j]]
+                cat_data.iloc[:, i] = np.array(column)
             else:
-                mixed_data[:, i] = D[label]
+                cat_data.iloc[:, i] = D[label]
         
-        return mixed_data.tolist()
+        return np.array(cat_data).tolist()
     
     def _prepend_feature_labels(self, X):
         Xl = np.copy(X).astype(str).tolist()
@@ -200,7 +199,7 @@ class RuleListClassifier(BaseEstimator):
             s = ""
             for i,j in enumerate(self.d_star):
                 if self.itemsets[j] != 'null':
-                    condition = "ELSE IF "+(" AND ".join([self.itemsets[j][k] for k in range(len(self.itemsets[j]))])) + " THEN"
+                    condition = "ELSE IF "+(" AND ".join([str(self.itemsets[j][k]) for k in range(len(self.itemsets[j]))])) + " THEN"
                 else:
                     condition = "ELSE"
                 s += condition + " probability of "+self.class1label+": "+str(np.round(self.theta[i]*100,decimals)) + "% ("+str(np.round(self.ci_theta[i][0]*100,decimals))+"%-"+str(np.round(self.ci_theta[i][1]*100,decimals))+"%)\n"

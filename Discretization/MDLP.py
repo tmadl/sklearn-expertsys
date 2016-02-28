@@ -50,8 +50,7 @@ class MDLP_Discretizer(object):
 
         #create copy of data only including features to discretize and class
         self._data = self._data_raw.loc[:, self._features + [class_label]]
-        self._data = self._data.astype(float)
-        self._data[class_label] = self._data[class_label].astype(int)
+        self._data = self._data.convert_objects(convert_numeric=True)
         #pre-compute all boundary points in dataset
         self._boundaries = self.compute_boundary_points_all_features()
         #initialize feature bins with empty arrays

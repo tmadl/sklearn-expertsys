@@ -28,7 +28,18 @@ minimum description length principle criterion, based on an implementation by
 Usage
 ===============
 
-The project requires [pyFIM](http://www.borgelt.net/pyfim.html), [scikit-learn](http://scikit-learn.org/stable/install.html), and [pandas](http://pandas.pydata.org/) to run.
+The project requires [pyFIM](http://www.borgelt.net/pyfim.html), [scikit-learn](http://scikit-learn.org/stable/install.html), 
+and [pandas](http://pandas.pydata.org/) to run.
+
+The included `RuleListClassifier` works as a scikit-learn estimator, with a `model.fit(X,y)` method
+which takes training data `X` (numpy array or pandas DataFrame; continuous, categorical or mixed data)
+and labels `y`. Numerical data in `X` is automatically discretized. To prevent discretization (e.g. to protect
+columns containing categorical data represented as integers), pass the list of protected column names
+in the `fit` method, e.g. `model.fit(X,y,undiscretized_features=['CAT_COLUMN_NAME'])` (entries in 
+undiscretized columns will be converted to strings and used as categorical values). 
+
+The learned rules of a trained model can be displayed simply by casting the object as a string, e.g. `print model`, 
+or by using the `model.tostring(decimals=1)` method and optionally specifying the rounding precision.
 
 Usage example:
 
@@ -45,10 +56,10 @@ y = (data.target+1)/2 # target labels (0 or 1)
 Xtrain, Xtest, ytrain, ytest = train_test_split(data.data, y) # split
 
 # train classifier (allow more iterations for better accuracy)
-clf = RuleListClassifier(max_iter=10000, class1label="diabetes", verbose=False)
-clf.fit(Xtrain, ytrain, feature_labels=feature_labels)
+model = RuleListClassifier(max_iter=10000, class1label="diabetes", verbose=False)
+model.fit(Xtrain, ytrain, feature_labels=feature_labels)
 
-print "RuleListClassifier Accuracy:", clf.score(Xtest, ytest), "Learned interpretable model:\n", clf
+print "RuleListClassifier Accuracy:", model.score(Xtest, ytest), "Learned interpretable model:\n", model
 print "RandomForestClassifier Accuracy:", RandomForestClassifier().fit(Xtrain, ytrain).score(Xtest, ytest)
 """
 **Output:**
