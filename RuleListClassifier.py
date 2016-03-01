@@ -1,5 +1,4 @@
 from sklearn.base import BaseEstimator
-from sklearn.utils import check_X_y
 import sklearn.metrics
 import sys
 import numpy as np
@@ -239,8 +238,8 @@ class RuleListClassifier(BaseEstimator):
             D = X
         
         N = len(D)
-        X = self._to_itemset_indices(D[:])
-        P = preds_d_t(X, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
+        X2 = self._to_itemset_indices(D[:])
+        P = preds_d_t(X2, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
         return np.vstack((1-P, P)).T
         
     def predict(self, X):
