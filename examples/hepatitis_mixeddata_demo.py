@@ -67,7 +67,7 @@ Xtrain, Xtest, ytrain, ytest = train_test_split(hepatitis_df, y) # split
 
 # train classifier (allow more iterations for better accuracy)
 clf = RuleListClassifier(max_iter=10000, class1label="survival", verbose=False)
-clf.fit(Xtrain, ytrain, feature_labels = hepatitis_df.columns)
+clf.fit(Xtrain, ytrain)
 
 print "RuleListClassifier Accuracy:", clf.score(Xtest, ytest), "Learned interpretable model:\n", clf
 
@@ -79,14 +79,15 @@ except:
     raise Exception("Please install category_encoders (pip install category_encoders) for comparing mixed data with Random Forests!")
 from sklearn import pipeline
 
-cat_indices = []
-for ft in range(len(columns)):
-    if hepatitis_df.columns[ft] not in clf.discretized_features:
-        cat_indices.append(ft)
-
 ppl = pipeline.Pipeline([
     ('encoder', HashingEncoder(cols=['LIVER_BIG', 'ANTIVIRALS', 'HISTOLOGY', 'SEX', 'STEROID', 'MALAISE', 'FATIGUE', 'SPIDERS', 'VARICES', 'LIVER_FIRM', 'SPLEEN_PALPABLE', 'ASCITES', 'ANOREXIA'])),
     ('clf', RandomForestClassifier())
 ])
+
+# back to dataframes (for HashingEncoder)
+Xtrain = pd.DataFrame(Xtrain)
+Xtrain.columns = hepatitis_df.columns
+Xtest = pd.DataFrame(Xtest)
+Xtest.columns = hepatitis_df.columns
 
 print "RandomForestClassifier Accuracy:", ppl.fit(Xtrain, ytrain).score(Xtest, ytest)
