@@ -62,7 +62,38 @@ class RuleListClassifier(BaseEstimator):
         self.d_star = None
         
         
-    def fit(self, X, y, feature_labels = [], undiscretized_features = []): # -1 for unlabeled
+    def _setlabels(self, X, feature_labels=[]):
+        if len(feature_labels) == 0:
+            if type(X) == pd.DataFrame and ('object' in str(X.columns.dtype) or 'str' in str(X.columns.dtype)):
+                feature_labels = X.columns
+            else:
+                feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
+        self.feature_labels = feature_labels
+        
+    def _discretize_mixed_data(self, X, y, undiscretized_features=[]):
+        if type(X) != list:
+            X = np.array(X).tolist()
+            
+        # check which features are numeric (to be discretized)
+        self.discretized_features = []
+        for fi in range(len(X[0])):
+            # if not string, and not specified as undiscretized
+            if isinstance(X[0][fi], numbers.Number) and (len(self.feature_labels)==0 or len(undiscretized_features)==0 or self.feature_labels[fi] not in undiscretized_features):
+                self.discretized_features.append(self.feature_labels[fi])                
+            
+        if len(self.discretized_features) > 0:
+            if self.verbose:
+                print "Warning: non-categorical data found. Trying to discretize. (Please convert categorical values to strings, and/or specify the argument 'undiscretized_features', to avoid this.)"
+            X = self.discretize(X, y)
+            
+        return X
+        
+    def _setdata(self, X, y, feature_labels=[], undiscretized_features = []):
+        self._setlabels(X, feature_labels)
+        X = self._discretize_mixed_data(X, y, undiscretized_features)
+        return X, y
+        
+    def fit(self, X, y, feature_labels = [], undiscretized_features = []):
         """Fit rule lists to data
 
         Parameters
@@ -88,27 +119,7 @@ class RuleListClassifier(BaseEstimator):
         if len(set(y)) != 2:
             raise Exception("Only binary classification is supported at this time!")
         
-        if len(feature_labels) == 0:
-            if type(X) == pd.DataFrame and ('object' in str(X.columns.dtype) or 'str' in str(X.columns.dtype)):
-                feature_labels = X.columns
-            else:
-                feature_labels = ["ft"+str(i+1) for i in range(len(X[0]))]
-        self.feature_labels = feature_labels
-        
-        if type(X) != list:
-            X = np.array(X).tolist()
-        
-        # check which features are numeric (to be discretized)
-        self.discretized_features = []
-        for fi in range(len(X[0])):
-            # if not string, and not specified as undiscretized
-            if isinstance(X[0][fi], numbers.Number) and (len(feature_labels)==0 or len(undiscretized_features)==0 or feature_labels[fi] not in undiscretized_features):
-                self.discretized_features.append(feature_labels[fi])                
-            
-        if len(self.discretized_features) > 0:
-            if self.verbose:
-                print "Warning: non-categorical data found. Trying to discretize. (Please convert categorical values to strings, and/or specify the argument 'undiscretized_features', to avoid this.)"
-            X = self.discretize(X, y)
+        X, y = self._setdata(X, y, feature_labels, undiscretized_features)
         
         permsdic = defaultdict(default_permsdic) #We will store here the MCMC results
         

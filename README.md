@@ -4,7 +4,8 @@ Highly interpretable, sklearn-compatible classifier based on decision rules
 This is a scikit-learn compatible wrapper for the Bayesian Rule List classifier 
 developed by [Letham et al., 2015](http://projecteuclid.org/euclid.aoas/1446488742) (see [Letham's original code](http://lethalletham.com/)), 
 extended by a minimum description length-based discretizer ([Fayyad &
-Irani, 1993](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf)) for continuous data.
+Irani, 1993](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf)) for continuous data, and 
+by an approach to subsample large datasets for better performance.
 
 It produces rule lists, which makes trained classifiers **easily interpretable 
 to human experts**, and is competitive with state of the art classifiers such as 
@@ -24,6 +25,12 @@ on continuous data after discretization. The RuleListClassifier class also inclu
 that can deal with continuous data (using [Fayyad & Irani's](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf) 
 minimum description length principle criterion, based on an implementation by 
 [navicto](https://github.com/navicto/Discretization-MDLPC)).
+
+The inference procedure is slow on large datasets. If you have more than a few hundred data points,
+try the included `BigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01)`, which first determines 
+a small subset of the training data that is most critical in defining a decision boundary (based on distances to 
+the decision hyperplane of a linear SVM) and learns a rule list only on this subset (make sure you pass in a 
+regularization parameter C that works well with a linear SVM on your data set).  
 
 Usage
 ===============
