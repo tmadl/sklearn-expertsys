@@ -16,7 +16,7 @@ ELSE survival probability: 88% (82% - 94%)
 
 Letham et al.'s approach only works on discrete data. However, this approach can still be used on continuous data after discretization. The RuleListClassifier class also includes a discretizer that can deal with continuous data (using [Fayyad & Irani's](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf) minimum description length principle criterion, based on an implementation by [navicto](https://github.com/navicto/Discretization-MDLPC)).
 
-The inference procedure is slow on large datasets. If you have more than a few hundred data points, and only numeric data, try the included `BigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01)`, which first determines a small subset of the training data that is most critical in defining a decision boundary (based on distances to the decision hyperplane of a linear SVM) and learns a rule list only on this subset (make sure you pass in a regularization parameter C that works well with a linear SVM on your data set). 
+The inference procedure is slow on large datasets. If you have more than a few thousand data points, and only numeric data, try the included `BigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01)`, which first determines a small subset of the training data that is most critical in defining a decision boundary (based on distances to the decision hyperplane of a linear SVM) and learns a rule list only on this subset (make sure you pass in a regularization parameter C that works well with a linear SVM on your data set). 
 
 Usage
 ===============
