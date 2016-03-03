@@ -20,7 +20,7 @@ for i in range(len(datasets)):
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(data.data, y)    
     
-    clf = RuleListClassifier(max_iter=50000, n_chains=3, class1label=data_class1_labels[i])
+    clf = RuleListClassifier(max_iter=50000, n_chains=3, class1label=data_class1_labels[i], verbose=False)
     clf.fit(Xtrain, ytrain, feature_labels=data_feature_labels[i])
     
     print "accuracy:", clf.score(Xtest, ytest)

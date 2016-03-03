@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 import numbers
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import LinearSVC
 from RuleListClassifier import RuleListClassifier
 
-class BigDataRuleListClassifier(RuleListClassifier):
+class SVMBigDataRuleListClassifier(RuleListClassifier):
     """
     A scikit-learn compatible wrapper for the Bayesian Rule List
     classifier by Benjamin Letham, adapted to work on large datasets. It 
@@ -23,9 +23,10 @@ class BigDataRuleListClassifier(RuleListClassifier):
         Rule List classifier (the data points closest to a linear decision
         boundary are selected).
         
-    subset_estimator: BaseEstimator, optional (default=RandomForestClassifier)
-        An Estimator which is able to produce probabilities, used for finding
-        the subset of the data which is closest to the decision boundary
+    subsetSVM_C : float, optional (default=1)
+        Regularization parameter for the SVM which is used to determine which
+        fraction of the data is most important (i.e. closest to the decision 
+        boundary) to use for training the Bayesian Rule List classifier
     
     listlengthprior : int, optional (default=3)
         Prior hyperparameter for expected list length (excluding null rule)
@@ -55,9 +56,9 @@ class BigDataRuleListClassifier(RuleListClassifier):
         Verbose output
     """
     
-    def __init__(self, training_subset=0.1, subset_estimator=RandomForestClassifier(), listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class1label="class 1", verbose=True):
+    def __init__(self, training_subset=0.1, subsetSVM_C=1, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class1label="class 1", verbose=True):
         self.training_subset = training_subset
-        self.subset_estimator = subset_estimator
+        self.subsetSVM_C = subsetSVM_C
         
         self.listlengthprior = listlengthprior
         self.listwidthprior = listwidthprior
@@ -82,15 +83,15 @@ class BigDataRuleListClassifier(RuleListClassifier):
             if not isinstance(X[0][fi], numbers.Number):
                 raise Exception("Sorry, only numeric data is supported by BigDataRuleListClassifier at this time")
         
-        Xn = np.array(X)
-        # train subset estimator if necessary
-        try:
-            self.subset_estimator.predict_proba(Xn[0])
-        except:
-            self.subset_estimator.fit(X, y)
+        # train linear SVM
+        self.svm = LinearSVC(C=self.subsetSVM_C)
+        self.svm.fit(X, y)
         # calculate distances from decision boundary for each point
-        dist_ones = np.abs(0.5-self.subset_estimator.predict_proba(Xn[np.where(y==1)[0], :])[:, 1])
-        dist_zeros = np.abs(0.5-self.subset_estimator.predict_proba(Xn[np.where(y==1)[0], :])[:, 0])
+        Xn = np.array(X)
+        dfun_ones = self.svm.decision_function(Xn[np.where(y==1)[0], :])
+        dist_ones = dfun_ones / np.linalg.norm(self.svm.coef_)
+        dfun_zeros = self.svm.decision_function(Xn[np.where(y==0)[0], :])
+        dist_zeros = dfun_ones / np.linalg.norm(self.svm.coef_)
         
         # take closest training_subset portion of data, preserving class imbalance
         if self.verbose:
