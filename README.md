@@ -1,15 +1,9 @@
 Highly interpretable, sklearn-compatible classifier based on decision rules
 ===============
 
-This is a scikit-learn compatible wrapper for the Bayesian Rule List classifier 
-developed by [Letham et al., 2015](http://projecteuclid.org/euclid.aoas/1446488742) (see [Letham's original code](http://lethalletham.com/)), 
-extended by a minimum description length-based discretizer ([Fayyad &
-Irani, 1993](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf)) for continuous data, and 
-by an approach to subsample large datasets for better performance.
+This is a scikit-learn compatible wrapper for the Bayesian Rule List classifier developed by [Letham et al., 2015](http://projecteuclid.org/euclid.aoas/1446488742) (see [Letham's original code](http://lethalletham.com/)), extended by a minimum description length-based discretizer ([Fayyad & Irani, 1993](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf)) for continuous data, and by an approach to subsample large datasets for better performance.
 
-It produces rule lists, which makes trained classifiers **easily interpretable 
-to human experts**, and is competitive with state of the art classifiers such as 
-random forests or SVMs.
+It produces rule lists, which makes trained classifiers **easily interpretable to human experts**, and is competitive with state of the art classifiers such as random forests or SVMs.
 
 For example, an easily understood Rule List model of the well-known Titanic dataset:
 
@@ -20,33 +14,18 @@ ELSE IF 1st class THEN survival probability: 96% (92% - 99%)
 ELSE survival probability: 88% (82% - 94%)
 ``` 
 
-Letham et al.'s approach only works on discrete data. However, this approach can still be used
-on continuous data after discretization. The RuleListClassifier class also includes a discretizer 
-that can deal with continuous data (using [Fayyad & Irani's](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf) 
-minimum description length principle criterion, based on an implementation by 
-[navicto](https://github.com/navicto/Discretization-MDLPC)).
+Letham et al.'s approach only works on discrete data. However, this approach can still be used on continuous data after discretization. The RuleListClassifier class also includes a discretizer that can deal with continuous data (using [Fayyad & Irani's](http://sci2s.ugr.es/keel/pdf/algorithm/congreso/fayyad1993.pdf) minimum description length principle criterion, based on an implementation by [navicto](https://github.com/navicto/Discretization-MDLPC)).
 
-The inference procedure is slow on large datasets. If you have more than a few hundred data points,
-and only numeric data, try the included `BigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01)`,  
-which first determines a small subset of the training data that is most critical in defining a decision boundary  
-(based on distances to the decision hyperplane of a linear SVM) and learns a rule list only on this subset  
-(make sure you pass in a regularization parameter C that works well with a linear SVM on your data set).  
+The inference procedure is slow on large datasets. If you have more than a few hundred data points, and only numeric data, try the included `BigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01)`, which first determines a small subset of the training data that is most critical in defining a decision boundary (based on distances to the decision hyperplane of a linear SVM) and learns a rule list only on this subset (make sure you pass in a regularization parameter C that works well with a linear SVM on your data set). 
 
 Usage
 ===============
 
-The project requires [pyFIM](http://www.borgelt.net/pyfim.html), [scikit-learn](http://scikit-learn.org/stable/install.html), 
-and [pandas](http://pandas.pydata.org/) to run.
+The project requires [pyFIM](http://www.borgelt.net/pyfim.html), [scikit-learn](http://scikit-learn.org/stable/install.html), and [pandas](http://pandas.pydata.org/) to run.
 
-The included `RuleListClassifier` works as a scikit-learn estimator, with a `model.fit(X,y)` method
-which takes training data `X` (numpy array or pandas DataFrame; continuous, categorical or mixed data)
-and labels `y`. Numerical data in `X` is automatically discretized. To prevent discretization (e.g. to protect
-columns containing categorical data represented as integers), pass the list of protected column names
-in the `fit` method, e.g. `model.fit(X,y,undiscretized_features=['CAT_COLUMN_NAME'])` (entries in 
-undiscretized columns will be converted to strings and used as categorical values). 
+The included `RuleListClassifier` works as a scikit-learn estimator, with a `model.fit(X,y)` method which takes training data `X` (numpy array or pandas DataFrame; continuous, categorical or mixed data) and labels `y`. Numerical data in `X` is automatically discretized. To prevent discretization (e.g. to protect columns containing categorical data represented as integers), pass the list of protected column names in the `fit` method, e.g. `model.fit(X,y,undiscretized_features=['CAT_COLUMN_NAME'])` (entries in undiscretized columns will be converted to strings and used as categorical values). 
 
-The learned rules of a trained model can be displayed simply by casting the object as a string, e.g. `print model`, 
-or by using the `model.tostring(decimals=1)` method and optionally specifying the rounding precision.
+The learned rules of a trained model can be displayed simply by casting the object as a string, e.g. `print model`, or by using the `model.tostring(decimals=1)` method and optionally specifying the rounding precision.
 
 Usage example:
 
