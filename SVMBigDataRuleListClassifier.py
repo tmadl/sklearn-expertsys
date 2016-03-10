@@ -69,6 +69,7 @@ class SVMBigDataRuleListClassifier(RuleListClassifier):
         self.max_iter = max_iter
         self.class1label = class1label
         self.verbose = verbose
+        self._zmin = 1
         
         self.thinning = 1 #The thinning rate
         self.burnin = self.max_iter//2 #the number of samples to drop as burn-in in-simulation
@@ -91,7 +92,7 @@ class SVMBigDataRuleListClassifier(RuleListClassifier):
         dfun_ones = self.svm.decision_function(Xn[np.where(y==1)[0], :])
         dist_ones = dfun_ones / np.linalg.norm(self.svm.coef_)
         dfun_zeros = self.svm.decision_function(Xn[np.where(y==0)[0], :])
-        dist_zeros = dfun_ones / np.linalg.norm(self.svm.coef_)
+        dist_zeros = dfun_zeros / np.linalg.norm(self.svm.coef_)
         
         # take closest training_subset portion of data, preserving class imbalance
         if self.verbose:

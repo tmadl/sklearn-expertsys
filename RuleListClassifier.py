@@ -20,9 +20,9 @@ class RuleListClassifier(BaseEstimator):
         Prior hyperparameter for expected list length (excluding null rule)
 
     listwidthprior : int, optional (default=1)
-        Prior hyperparameter for expected list length (excluding null rule)
+        Prior hyperparameter for expected list width (excluding null rule)
         
-    maxcardinality : int, optional (default=1)
+    maxcardinality : int, optional (default=2)
         Maximum cardinality of an itemset
         
     minsupport : int, optional (default=10)
@@ -54,6 +54,7 @@ class RuleListClassifier(BaseEstimator):
         self.max_iter = max_iter
         self.class1label = class1label
         self.verbose = verbose
+        self._zmin = 1
         
         self.thinning = 1 #The thinning rate
         self.burnin = self.max_iter//2 #the number of samples to drop as burn-in in-simulation
@@ -130,11 +131,11 @@ class RuleListClassifier(BaseEstimator):
         data_neg = [x for i,x in enumerate(data) if y[i]==1]
         assert len(data_pos)+len(data_neg) == len(data)
         try:
-            itemsets = [r[0] for r in fpgrowth(data_pos,supp=self.minsupport,zmax=self.maxcardinality)]
-            itemsets.extend([r[0] for r in fpgrowth(data_neg,supp=self.minsupport,zmax=self.maxcardinality)])
+            itemsets = [r[0] for r in fpgrowth(data_pos,supp=self.minsupport,zmin=self._zmin,zmax=self.maxcardinality)]
+            itemsets.extend([r[0] for r in fpgrowth(data_neg,supp=self.minsupport,zmin=self._zmin,zmax=self.maxcardinality)])
         except TypeError:
-            itemsets = [r[0] for r in fpgrowth(data_pos,supp=self.minsupport,max=self.maxcardinality)]
-            itemsets.extend([r[0] for r in fpgrowth(data_neg,supp=self.minsupport,max=self.maxcardinality)])
+            itemsets = [r[0] for r in fpgrowth(data_pos,supp=self.minsupport,min=self._zmin,max=self.maxcardinality)]
+            itemsets.extend([r[0] for r in fpgrowth(data_neg,supp=self.minsupport,min=self._zmin,max=self.maxcardinality)])
         itemsets = list(set(itemsets))
         if self.verbose:
             print len(itemsets),'rules mined'

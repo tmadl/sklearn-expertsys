@@ -68,6 +68,7 @@ class BigDataRuleListClassifier(RuleListClassifier):
         self.max_iter = max_iter
         self.class1label = class1label
         self.verbose = verbose
+        self._zmin = 1
         
         self.thinning = 1 #The thinning rate
         self.burnin = self.max_iter//2 #the number of samples to drop as burn-in in-simulation
@@ -89,18 +90,21 @@ class BigDataRuleListClassifier(RuleListClassifier):
         except:
             self.subset_estimator.fit(X, y)
         # calculate distances from decision boundary for each point
-        dist_ones = np.abs(0.5-self.subset_estimator.predict_proba(Xn[np.where(y==1)[0], :])[:, 1])
-        dist_zeros = np.abs(0.5-self.subset_estimator.predict_proba(Xn[np.where(y==1)[0], :])[:, 0])
+        dist = np.abs(0.5-self.subset_estimator.predict_proba(Xn)[:, 1])
+        ones_idx = np.where(y==1)[0]
+        zeros_idx = np.where(y==0)[0]
+        dist_ones = dist[ones_idx]
+        dist_zeros = dist[zeros_idx]
         
         # take closest training_subset portion of data, preserving class imbalance
         if self.verbose:
             print "Reduced from", len(X)
         n = int(len(y)*self.training_subset)
-        bestidx_ones = np.argsort(dist_ones)
-        bestidx_zeros = np.argsort(dist_zeros)
+        bestidx_ones = np.argsort(-dist_ones)
+        bestidx_zeros = np.argsort(-dist_zeros)
         one_fraction = len(np.where(y==1)[0])/float(len(y))
-        keep_idx = bestidx_ones[:(int(n*one_fraction)+1)]
-        keep_idx = np.hstack((keep_idx, bestidx_zeros[:(int(n*(1-one_fraction))+1)]))
+        keep_idx = ones_idx[bestidx_ones[:(int(n*one_fraction)+1)]]
+        keep_idx = np.hstack((keep_idx, zeros_idx[bestidx_zeros[:(int(n*(1-one_fraction))+1)]]))
         
         if type(X) == pd.DataFrame:
             X = X.iloc[keep_idx, :]
