@@ -49,14 +49,14 @@ class SVMBigDataRuleListClassifier(RuleListClassifier):
     max_iter : int, optional (default=50000)
         Maximum number of iterations
         
-    class1label: str, optional (default="class 1")
-        Label or description of what class 1 means
+    class0label: str, optional (default="class 1")
+        Label or description of what the first class (with y=0) means
         
     verbose: bool, optional (default=True)
         Verbose output
     """
     
-    def __init__(self, training_subset=0.1, subsetSVM_C=1, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class1label="class 1", verbose=True):
+    def __init__(self, training_subset=0.1, subsetSVM_C=1, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class0label="class 1", verbose=True):
         self.training_subset = training_subset
         self.subsetSVM_C = subsetSVM_C
         
@@ -67,7 +67,7 @@ class SVMBigDataRuleListClassifier(RuleListClassifier):
         self.alpha = alpha
         self.n_chains = n_chains
         self.max_iter = max_iter
-        self.class1label = class1label
+        self.class0label = class0label
         self.verbose = verbose
         self._zmin = 1
         
