@@ -266,7 +266,7 @@ class RuleListClassifier(BaseEstimator):
         y_pred : array, shape = [n_samples]
             Class labels for samples in X.
         """
-        return 1*(self.predict_proba(X)[:,0]>=0.5)
+        return 1*(self.predict_proba(X)[:,1]>=0.5)
     
     def score(self, X, y, sample_weight=None):
         return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
