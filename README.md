@@ -44,7 +44,7 @@ y = (data.target+1)/2 # target labels (0 or 1)
 Xtrain, Xtest, ytrain, ytest = train_test_split(data.data, y) # split
 
 # train classifier (allow more iterations for better accuracy; use BigDataRuleListClassifier for large datasets)
-model = RuleListClassifier(max_iter=10000, class0label="diabetes", verbose=False)
+model = RuleListClassifier(max_iter=10000, class1label="diabetes", verbose=False)
 model.fit(Xtrain, ytrain, feature_labels=feature_labels)
 
 print "RuleListClassifier Accuracy:", model.score(Xtest, ytest), "Learned interpretable model:\n", model

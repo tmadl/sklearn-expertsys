@@ -8,7 +8,7 @@ import time
 feature_labels = ["#Pregnant","Glucose concentration test","Blood pressure(mmHg)","Triceps skin fold thickness(mm)","2-Hour serum insulin (mu U/ml)","Body mass index","Diabetes pedigree function","Age (years)"]
     
 data = fetch_mldata("diabetes") # get dataset
-y = (data.target+1)/2 # target labels (0 or 1)
+y = -(data.target-1)/2 # target labels (0: healthy, or 1: diabetes) - the original dataset contains -1 for diabetes and +1 for healthy
 
 ###############################################################################
 
@@ -16,19 +16,19 @@ Xtrain, Xtest, ytrain, ytest = train_test_split(data.data, y) # split
 
 t0 = time.time()
 # train classifier (allow more iterations for better accuracy)
-clf = RuleListClassifier(max_iter=10000, class0label="diabetes", verbose=False)
+clf = RuleListClassifier(max_iter=10000, class1label="diabetes", verbose=False)
 clf.fit(Xtrain, ytrain, feature_labels=feature_labels)
 print "RuleListClassifier Accuracy:", clf.score(Xtest, ytest), "Learned interpretable model:\n", clf
 t1 = time.time()
 
 # train classifier (allow more iterations for better accuracy)
-bclf = BigDataRuleListClassifier(training_subset=0.1, subset_estimator=RandomForestClassifier(n_estimators=100).fit(Xtrain, ytrain), max_iter=10000, class0label="diabetes", verbose=False)
+bclf = BigDataRuleListClassifier(training_subset=0.1, subset_estimator=RandomForestClassifier(n_estimators=100).fit(Xtrain, ytrain), max_iter=10000, class1label="diabetes", verbose=False)
 bclf.fit(Xtrain, ytrain, feature_labels=feature_labels)
 print "BigDataRuleListClassifier Accuracy:", bclf.score(Xtest, ytest), "Learned interpretable model:\n", bclf
 t2 = time.time()
 
 # train classifier (allow more iterations for better accuracy)
-sclf = SVMBigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01, max_iter=10000, class0label="diabetes", verbose=False)
+sclf = SVMBigDataRuleListClassifier(training_subset=0.1, subsetSVM_C=0.01, max_iter=10000, class1label="diabetes", verbose=False)
 sclf.fit(Xtrain, ytrain, feature_labels=feature_labels)
 print "SVMBigDataRuleListClassifier Accuracy:", bclf.score(Xtest, ytest), "Learned interpretable model:\n", sclf
 t3 = time.time()

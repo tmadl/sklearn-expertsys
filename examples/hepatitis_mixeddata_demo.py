@@ -66,7 +66,7 @@ print hepatitis_df.head()
 Xtrain, Xtest, ytrain, ytest = train_test_split(hepatitis_df, y) # split
 
 # train classifier (allow more iterations for better accuracy)
-clf = RuleListClassifier(max_iter=10000, class0label="death", verbose=False)
+clf = RuleListClassifier(max_iter=10000, class1label="survival", verbose=False)
 clf.fit(Xtrain, ytrain)
 
 print "RuleListClassifier Accuracy:", clf.score(Xtest, ytest), "Learned interpretable model:\n", clf

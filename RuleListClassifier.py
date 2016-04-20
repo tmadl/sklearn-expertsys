@@ -37,14 +37,14 @@ class RuleListClassifier(BaseEstimator):
     max_iter : int, optional (default=50000)
         Maximum number of iterations
         
-    class0label: str, optional (default="class 1")
-        Label or description of what the first class (with y=0) means
+    class1label: str, optional (default="class 1")
+        Label or description of what the positive class (with y=1) means
         
     verbose: bool, optional (default=True)
         Verbose output
     """
     
-    def __init__(self, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class0label="class 1", verbose=True):
+    def __init__(self, listlengthprior=3, listwidthprior=1, maxcardinality=2, minsupport=10, alpha = np.array([1.,1.]), n_chains=3, max_iter=50000, class1label="class 1", verbose=True):
         self.listlengthprior = listlengthprior
         self.listwidthprior = listwidthprior
         self.maxcardinality = maxcardinality
@@ -52,7 +52,7 @@ class RuleListClassifier(BaseEstimator):
         self.alpha = alpha
         self.n_chains = n_chains
         self.max_iter = max_iter
-        self.class0label = class0label
+        self.class1label = class1label
         self.verbose = verbose
         self._zmin = 1
         
@@ -154,7 +154,7 @@ class RuleListClassifier(BaseEstimator):
         itemsets_all = ['null']
         itemsets_all.extend(itemsets)
         
-        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((y, 1-np.array(y))).T.astype(int),nruleslen,lhs_len,itemsets_all)
+        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((1-np.array(y), y)).T.astype(int),nruleslen,lhs_len,itemsets_all)
             
         #Do MCMC
         res,Rhat = run_bdl_multichain_serial(self.max_iter,self.thinning,self.alpha,self.listlengthprior,self.listwidthprior,Xtrain,Ytrain,nruleslen,lhs_len,self.maxcardinality,permsdic,self.burnin,self.n_chains,[None]*self.n_chains, verbose=self.verbose)
@@ -203,8 +203,8 @@ class RuleListClassifier(BaseEstimator):
     def tostring(self, decimals=1):
         if self.d_star:
             detect = ""
-            if self.class0label != "class 1":
-                detect = "for detecting "+self.class0label
+            if self.class1label != "class 1":
+                detect = "for detecting "+self.class1label
             header = "Trained RuleListClassifier "+detect+"\n"
             separator = "".join(["="]*len(header))+"\n"
             s = ""
@@ -213,7 +213,7 @@ class RuleListClassifier(BaseEstimator):
                     condition = "ELSE IF "+(" AND ".join([str(self.itemsets[j][k]) for k in range(len(self.itemsets[j]))])) + " THEN"
                 else:
                     condition = "ELSE"
-                s += condition + " probability of "+self.class0label+": "+str(np.round(self.theta[i]*100,decimals)) + "% ("+str(np.round(self.ci_theta[i][0]*100,decimals))+"%-"+str(np.round(self.ci_theta[i][1]*100,decimals))+"%)\n"
+                s += condition + " probability of "+self.class1label+": "+str(np.round(self.theta[i]*100,decimals)) + "% ("+str(np.round(self.ci_theta[i][0]*100,decimals))+"%-"+str(np.round(self.ci_theta[i][1]*100,decimals))+"%)\n"
             return header+separator+s[5:]+separator[1:]
         else:
             return "(Untrained RuleListClassifier)"
@@ -252,7 +252,7 @@ class RuleListClassifier(BaseEstimator):
         N = len(D)
         X2 = self._to_itemset_indices(D[:])
         P = preds_d_t(X2, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
-        return np.vstack((1-P, P)).T
+        return np.vstack((P, 1-P)).T
         
     def predict(self, X):
         """Perform classification on samples in X.

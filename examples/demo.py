@@ -9,7 +9,7 @@ data_feature_labels = [
     ["Sepal length", "Sepal width", "Petal length", "Petal width"],
     ["#Pregnant","Glucose concentration demo","Blood pressure(mmHg)","Triceps skin fold thickness(mm)","2-Hour serum insulin (mu U/ml)","Body mass index","Diabetes pedigree function","Age (years)"]
 ]
-data_class0_labels = ["Iris Versicolour", "Diabetes"]
+data_class1_labels = ["Iris Versicolour", "No Diabetes"]
 for i in range(len(datasets)):
     print "--------"
     print "DATASET: ", datasets[i], "(", dataseturls[i], ")"
@@ -20,7 +20,7 @@ for i in range(len(datasets)):
 
     Xtrain, Xtest, ytrain, ytest = train_test_split(data.data, y)    
     
-    clf = RuleListClassifier(max_iter=50000, n_chains=3, class0label=data_class0_labels[i], verbose=False)
+    clf = RuleListClassifier(max_iter=50000, n_chains=3, class1label=data_class1_labels[i], verbose=False)
     clf.fit(Xtrain, ytrain, feature_labels=data_feature_labels[i])
     
     print "accuracy:", clf.score(Xtest, ytest)
