@@ -154,7 +154,7 @@ class RuleListClassifier(BaseEstimator):
         itemsets_all = ['null']
         itemsets_all.extend(itemsets)
         
-        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((y, 1-np.array(y))).T.astype(int),nruleslen,lhs_len,itemsets_all)
+        Xtrain,Ytrain,nruleslen,lhs_len,self.itemsets = (X,np.vstack((1-np.array(y),y)).T.astype(int),nruleslen,lhs_len,itemsets_all)
             
         #Do MCMC
         res,Rhat = run_bdl_multichain_serial(self.max_iter,self.thinning,self.alpha,self.listlengthprior,self.listwidthprior,Xtrain,Ytrain,nruleslen,lhs_len,self.maxcardinality,permsdic,self.burnin,self.n_chains,[None]*self.n_chains, verbose=self.verbose)
@@ -266,7 +266,7 @@ class RuleListClassifier(BaseEstimator):
         y_pred : array, shape = [n_samples]
             Class labels for samples in X.
         """
-        return 1*(self.predict_proba(X)[:,0]>=0.5)
+        return 1*(self.predict_proba(X)[:,1]>=0.5)
     
     def score(self, X, y, sample_weight=None):
         return sklearn.metrics.accuracy_score(y, self.predict(X), sample_weight=sample_weight)
