@@ -252,7 +252,7 @@ class RuleListClassifier(BaseEstimator):
         N = len(D)
         X2 = self._to_itemset_indices(D[:])
         P = preds_d_t(X2, np.zeros((N, 1), dtype=int),self.d_star,self.theta)
-        return np.vstack((P, 1-P)).T
+        return np.vstack((1-P, P)).T
         
     def predict(self, X):
         """Perform classification on samples in X.
