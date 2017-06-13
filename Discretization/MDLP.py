@@ -103,7 +103,7 @@ class MDLP_Discretizer(object):
         '''
         #get dataframe with only rows of interest, and feature and class columns
         data_partition = data.copy(deep=True)
-        data_partition.sort(feature, ascending=True, inplace=True)
+        data_partition.sort_values(feature, ascending=True, inplace=True)
 
         boundary_points = []
 
