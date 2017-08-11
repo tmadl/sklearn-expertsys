@@ -276,7 +276,7 @@ def main(argv):
             print 'Input file: %s' % data_path
         elif opt == '--out_path':
             out_path_data = value
-            if not data_path.endswith('csv') or data_path.endswith('CSV'):
+            if not out_path_data.endswith('csv') or out_path_data.endswith('CSV'):
                 out_path_data = '%s.csv' % out_path_data
             print 'Output file to be saved at: %s' % out_path_data
         elif opt == '--features':
